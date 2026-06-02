@@ -1,4 +1,11 @@
 function [ sol, out ] = apdhgp_lp( f, Ain, bin, Aeq, beq, ub, lb, x_init, y_init, opts )
+    if ~exist('opts','var') || isempty(opts)
+        opts = [];
+    end
+    if ~isfield(opts, 'prec')
+        opts.prec = @(x) double(x);
+    end
+    prec = opts.prec;
 
     %% Record problem dimensions
     Nvar = size(Ain,2);
@@ -56,13 +63,13 @@ function [ sol, out ] = apdhgp_lp( f, Ain, bin, Aeq, beq, ub, lb, x_init, y_init
     b_scaled = LeftPrecond .* b;
     f_scaled = f .* RightPrecond;
 
-    % Convert inputs to DoubleDouble precision
-    f_dd = DoubleDouble(f_scaled);
-    M_dd = DoubleDouble(M_scaled);
-    b_dd = DoubleDouble(b_scaled);
+    % Convert inputs to dynamic precision
+    f_dd = prec(f_scaled);
+    M_dd = prec(M_scaled);
+    b_dd = prec(b_scaled);
 
-    LeftPrecond_dd = DoubleDouble(LeftPrecond);
-    RightPrecond_dd = DoubleDouble(RightPrecond);
+    LeftPrecond_dd = prec(LeftPrecond);
+    RightPrecond_dd = prec(RightPrecond);
 
     bin_dd = b_dd(1:Nin);
     beq_dd = b_dd(Nin+1:end);
@@ -71,22 +78,22 @@ function [ sol, out ] = apdhgp_lp( f, Ain, bin, Aeq, beq, ub, lb, x_init, y_init
     ub_scaled_double = ub;
     finite_ub = isfinite(ub);
     ub_scaled_double(finite_ub) = ub(finite_ub) ./ RightPrecond(finite_ub);
-    ub_scaled = DoubleDouble(ub_scaled_double);
+    ub_scaled = prec(ub_scaled_double);
 
     lb_scaled_double = lb;
     finite_lb = isfinite(lb);
     lb_scaled_double(finite_lb) = lb(finite_lb) ./ RightPrecond(finite_lb);
-    lb_scaled = DoubleDouble(lb_scaled_double);
+    lb_scaled = prec(lb_scaled_double);
 
     %% Define the ingredients PDHG needs to solve this problem
     fProx = @(x,tau) min(ub_scaled, max(x - tau*f_dd, lb_scaled));
-    gProx = @(y,sigma) [ max(y(1:Nin)-sigma*bin_dd, DoubleDouble(0)) ; y(Nin+1:end)-sigma*beq_dd ];
+    gProx = @(y,sigma) [ max(y(1:Nin)-sigma*bin_dd, prec(0)) ; y(Nin+1:end)-sigma*beq_dd ];
     A = @(x) M_dd*x;
     At = @(y) M_dd'*y;
 
     % Scale the initial primal and dual guesses
-    x0_dd = DoubleDouble(x_init) ./ RightPrecond_dd;
-    y0_dd = DoubleDouble(y_init) ./ LeftPrecond_dd;
+    x0_dd = prec(x_init) ./ RightPrecond_dd;
+    y0_dd = prec(y_init) ./ LeftPrecond_dd;
 
     %% Call the adaptive PDHG high-precision solver
     if ~exist('opts','var')

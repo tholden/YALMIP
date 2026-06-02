@@ -16,8 +16,9 @@ if ~exist('opts','var')
     opts = [];
 end
 opts = setDefaults(opts,x,A,At);
+prec = opts.prec;
 %  Make sure A and At are adjoints of one another
-checkAdjoints(A,At,x,y);
+checkAdjoints(A,At,x,y,prec);
 
 %% Get some commonly used values from the 'opts' struct
 tau = opts.tau;        % primal stepsize
@@ -29,20 +30,20 @@ Delta = opts.Delta;     % Used to compare residuals to decide when to update ste
 
 %% Allocate space for the returned variables in the 'outs' struct
 outs = [];
-outs.tau = DoubleDouble.zeros(maxIters,1);    % primal stepsizes
-outs.sigma = DoubleDouble.zeros(maxIters,1);  % dual stepsizes
-outs.f1 = DoubleDouble.zeros(maxIters,1);     % optional function evaluation
-outs.f2 = DoubleDouble.zeros(maxIters,1);     % optional function evaluation
-outs.p = DoubleDouble.zeros(maxIters,1);      % primal residuals
-outs.d = DoubleDouble.zeros(maxIters,1);      % dual residuals
+outs.tau = prec(zeros(maxIters,1));    % primal stepsizes
+outs.sigma = prec(zeros(maxIters,1));  % dual stepsizes
+outs.f1 = prec(zeros(maxIters,1));     % optional function evaluation
+outs.f2 = prec(zeros(maxIters,1));     % optional function evaluation
+outs.p = prec(zeros(maxIters,1));      % primal residuals
+outs.d = prec(zeros(maxIters,1));      % dual residuals
 
 %% Initialize some values
 updates = 0;
 Ax = A(x);
 Aty = At(y);
 
-maxPrimal = DoubleDouble(-Inf);
-maxDual = DoubleDouble(-Inf);
+maxPrimal = prec(-Inf);
+maxDual = prec(-Inf);
 
 %% Begin Iteration
 for iter = 1:maxIters
@@ -138,9 +139,9 @@ return % end function
 
 
 %% Check that A and At represent adjoints
-function checkAdjoints(A,At,x,y)
-    rx = DoubleDouble(randn(size(x)));
-    ry = DoubleDouble(randn(size(y)));
+function checkAdjoints(A,At,x,y,prec)
+    rx = prec(randn(size(x)));
+    ry = prec(randn(size(y)));
     prod1 = A(rx).*conj(ry);
     prod2 = rx.*conj(At(ry));
     dot1 = sum(prod1(:));
@@ -153,13 +154,18 @@ return
 %% Fill in the struct of options with the default values
 function opts = setDefaults(opts,x0,A,At)
 
+if ~isfield(opts, 'prec')
+    opts.prec = @(x) double(x);
+end
+prec = opts.prec;
+
 %  L:  The reciprocal of the spectral radius of A'A.
 %  Approximate the spectral radius of A'A if we don't know L
 if ~isfield(opts,'L') || opts.L<=0
-    x = DoubleDouble(randn(size(x0)));
+    x = prec(randn(size(x0)));
     transform = At(A(x));
     specRadius = norm(transform(:)) / norm(x(:));
-    opts.L = DoubleDouble(2) / specRadius;
+    opts.L = prec(2) / specRadius;
 end
 
 %  maxIters: The maximum number of iterations
@@ -168,7 +174,11 @@ if ~isfield(opts,'maxIters')
 end
 % tol:  The relative decrease in the residuals before the method stops
 if ~isfield(opts,'tol') % Stopping tolerance
-    opts.tol = DoubleDouble(1e-24);
+    if isa(prec(0), 'double')
+        opts.tol = 1e-12;
+    else
+        opts.tol = prec(1e-24);
+    end
 end
 % adaptive:  If 'true' then use adaptive method.
 if ~isfield(opts,'adaptive')    %  is Adaptive?
@@ -183,12 +193,12 @@ end
 % f1:  An optional function that is computed and stored after every
 % iteration
 if ~isfield(opts,'f1')
-    opts.f1 = @(x,y) DoubleDouble(0);
+    opts.f1 = @(x,y) prec(0);
 end
 % f2:  An optional function that is computed and stored after every
 % iteration
 if ~isfield(opts,'f2')
-    opts.f2 = @(x,y) DoubleDouble(0);
+    opts.f2 = @(x,y) prec(0);
 end
 % tau:  The initial stepsize for the primal variables
 if ~isfield(opts,'tau')         % starting value of tau
@@ -201,19 +211,19 @@ end
 
 %% Adaptivity parameters
 if ~isfield(opts,'a')   %  Initial adaptive update strength for stepsizes
-    opts.a = DoubleDouble(0.5);
+    opts.a = prec(0.5);
 end
 if ~isfield(opts,'eta') %  How fast does the adaptivity level decay
-    opts.eta = DoubleDouble(0.95);
+    opts.eta = prec(0.95);
 end
 if ~isfield(opts,'Delta') % update stepsizes when primal/dual ratio exceeds Delta
-    opts.Delta = DoubleDouble(2);
+    opts.Delta = prec(2);
 end
 if ~isfield(opts,'gamma') % Used to determine when need to backtrack to maintain positivity conditions
-    opts.gamma = DoubleDouble(0.75);
+    opts.gamma = prec(0.75);
 end
 if ~isfield(opts,'b')  % Adaptivity parameter used for backtracking update
-    opts.b = DoubleDouble(0.95);
+    opts.b = prec(0.95);
 end
 
 %% Stopping conditions
@@ -234,7 +244,11 @@ if strcmp(opts.stopRule,'iterations')
 end
 
 if strcmp(opts.stopRule,'ratioResidual')
-    opts.stopNow = @(x,y,primal,dual,maxPrimal,maxDual) (primal/maxPrimal<opts.tol && dual/maxDual<opts.tol) || (primal<DoubleDouble(1e-28) && dual<DoubleDouble(1e-28)); 
+    if isa(prec(0), 'double')
+        opts.stopNow = @(x,y,primal,dual,maxPrimal,maxDual) (primal/maxPrimal<opts.tol && dual/maxDual<opts.tol) || (primal<1e-15 && dual<1e-15); 
+    else
+        opts.stopNow = @(x,y,primal,dual,maxPrimal,maxDual) (primal/maxPrimal<opts.tol && dual/maxDual<opts.tol) || (primal<prec(1e-28) && dual<prec(1e-28)); 
+    end
 end
 
 assert(isfield(opts,'stopNow'),['Invalid choice for stopping rule: ' opts.stopRule ]);
