@@ -8,32 +8,6 @@ if isempty(internal_solver_tag)
     error('APDHGP: No internal solver specified in options.apdhgp.internalsolver.');
 end
 
-% Check if the high precision library GEM is in the path
-if exist('gem','class') == 8
-    highPrecisionSupported = true;
-else
-    highPrecisionSupported = false;
-end
-
-precdigits = options.apdhgp.precdigits;
-if precdigits > 15
-    if ~highPrecisionSupported
-        warning('APDHGP: The GEM library was not found in MATLAB''s path. Falling back to double precision (limited to 1e-15).');
-        use_gem = false;
-    else
-        use_gem = true;
-        % Set the GEM internal precision following the same logic as in iterative_refinement
-        if gem.workingPrecision < precdigits + 20
-            if options.verbose >= 1
-                warning(['Precision of the GEM library is low (', num2str(gem.workingPrecision), ' digits), increasing it to ', num2str(precdigits + 20), ' digits.']);
-            end
-            gem.workingPrecision(precdigits + 20);
-        end
-    end
-else
-    use_gem = false;
-end
-
 % Set up the internal interfacedata structure to run the initial solver
 internal_interfacedata = interfacedata;
 internal_interfacedata.options.solver = internal_solver_tag;
@@ -114,21 +88,7 @@ y_init = [y_in; y_eq];
 % Setup opts for high-precision PDHG polish solver
 opts = [];
 opts.maxIters = options.apdhgp.maxiter;
-if isempty(options.apdhgp.tol)
-    if use_gem
-        opts.tol = 10^(-options.apdhgp.precdigits);
-    else
-        opts.tol = 1e-12; % Standard double maximum feasible tolerance
-    end
-else
-    opts.tol = options.apdhgp.tol;
-end
-
-if use_gem
-    opts.prec = @(x) gem(x);
-else
-    opts.prec = @(x) double(x);
-end
+opts.tol = options.apdhgp.tol;
 
 % Run high-precision PDHG polish solver
 solvertime = tic;

@@ -658,8 +658,7 @@ refiner.dualinprimalform = true;
 
 function apdhgp = setup_apdhgp_options
 apdhgp.internalsolver = '';
-apdhgp.precdigits = 24;
-apdhgp.tol = [];
+apdhgp.tol = 1e-24;
 apdhgp.maxiter = 100000;
 
 
