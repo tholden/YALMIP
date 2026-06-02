@@ -124,6 +124,9 @@ else
     options.refiner = setup_refiner_options;
     Names = appendOptionNames(Names,options.refiner,'refiner');
 
+    options.apdhgp = setup_apdhgp_options;
+    Names = appendOptionNames(Names,options.apdhgp,'apdhgp');
+
     % External solvers  
     options.baron = setup_baron_options;
     Names = appendOptionNames(Names,options.baron,'baron');
@@ -651,6 +654,12 @@ refiner.refinedual = true;
 refiner.solveprimalfirst = true;
 refiner.primalinprimalform = true;
 refiner.dualinprimalform = true;
+
+
+function apdhgp = setup_apdhgp_options
+apdhgp.internalsolver = '';
+apdhgp.tol = 1e-24;
+apdhgp.maxiter = 100000;
 
 
 function bpmpd = setup_bpmpd_options

@@ -640,14 +640,14 @@ solver(i).constraint.binary = 1;
 i = i+1;
 
 if ~exist('OCTAVE_VERSION','builtin')
-solver(i) = lpsolver;
-solver(i).tag     = 'GLPK';
-solver(i).version = 'GLPKMEX';
-solver(i).checkfor= {'glpk'};
-solver(i).call    = 'callglpk';
-solver(i).constraint.integer = 1;
-solver(i).constraint.binary = 1;
-i = i+1;
+    solver(i) = lpsolver;
+    solver(i).tag     = 'GLPK';
+    solver(i).version = 'GLPKMEX';
+    solver(i).checkfor= {'glpk'};
+    solver(i).call    = 'callglpk';
+    solver(i).constraint.integer = 1;
+    solver(i).constraint.binary = 1;
+    i = i+1;
 end
 
 % Needed for Later Octave version (glpkmex is depracated)
@@ -820,7 +820,7 @@ solver(i) = sdpsolver;
 solver(i).tag     = 'SeDuMi';
 solver(i).subversion = '';
 solver(i).checkfor= {'sedumi_version'};
-solver(i).versionnumbercreator = @()sedumi_version; 
+solver(i).versionnumbercreator = @()sedumi_version;
 solver(i).requiredversionnumber= '1.3.6';
 solver(i).call    = 'callsedumi';
 solver(i).constraint.equalities.linear = 1;
@@ -1928,4 +1928,12 @@ solver(i).subversion = '1.1';
 solver(i).checkfor= {'iterative_refinement'};
 solver(i).call    = 'iterative_refinement';
 solver(i).supportshighprec = 1;
+i = i+1;
+
+solver(i) = lpsolver;
+solver(i).tag     = 'APDHGP';
+solver(i).subversion = '1.0';
+solver(i).checkfor= {'apdhgp'};
+solver(i).call    = 'apdhgp';
+% solver(i).supportshighprec = 1;
 i = i+1;
